@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Stack, Tabs } from 'expo-router';
 import React from 'react';
 
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
@@ -9,12 +9,12 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <Tabs
+    <Stack
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
       }}>
-      <Tabs.Screen
+      <Stack.Screen
         name="index"
         options={{
           title: 'Home',
@@ -23,7 +23,7 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tabs.Screen
+      <Stack.Screen
         name="explore"
         options={{
           title: 'Explore',
@@ -32,6 +32,6 @@ export default function TabLayout() {
           ),
         }}
       />
-    </Tabs>
+    </Stack>
   );
 }

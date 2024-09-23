@@ -1,70 +1,172 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import {
+  Image,
+  StyleSheet,
+  Platform,
+  TouchableOpacity,
+  Pressable,
+  Alert,
+  TextInput,
+  FlatList,
+  LayoutAnimation,
+} from "react-native";
+import { useEffect, useState } from "react";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { HelloWave } from "@/components/HelloWave";
+import ParallaxScrollView from "@/components/ParallaxScrollView";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { useThemeColor } from "@/hooks/useThemeColor";
+import { Colors } from "@/constants/Colors";
+import ShoppingListItem from "@/components/_local-components/ShoppingListItem";
+import { Link } from "expo-router";
+import { getStorage, setStorage } from "@/utils/storage";
+
+type ShoppingListItemType = {
+  name: string;
+  isCompleted?: boolean;
+  id: string;
+  completedAtTimestamp?: number;
+  lastUpdatedTimestamp: number;
+};
+
+const storageKey = "shoppingList";
 
 export default function HomeScreen() {
+  const [value, setValue] = useState("");
+  const [list, setList] = useState<ShoppingListItemType[]>([]);
+
+  useEffect(() => {
+    const fetchInitial = async () => {
+      const data = await getStorage(storageKey);
+      if (data) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setList(data);
+      }
+    };
+    fetchInitial();
+  }, []);
+  const handleAddItem = () => {
+    if (value) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
+      setList([
+        ...list,
+        {
+          name: value,
+          isCompleted: false,
+          id: Date.now().toString(),
+          lastUpdatedTimestamp: Date.now(),
+        },
+      ]);
+      setValue("");
+      setStorage(storageKey, setList);
+    }
+  };
+  const handleDelete = (id: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
+    setList(list.filter((item) => item.id !== id));
+    setStorage(storageKey, setList);
+  };
+  const handleToggleCompleted = (id: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
+    setList(
+      list.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              lastUpdatedTimestamp: Date.now(),
+              completedAtTimestamp: item.completedAtTimestamp
+                ? undefined
+                : Date.now(),
+            }
+          : item
+      )
+    );
+    setStorage(storageKey, list);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    // <ParallaxScrollView
+    //   headerBackgroundColor={{ light: "#A1CEDC", dark: "#1D3D47" }}
+    // >
+    <FlatList
+      stickyHeaderIndices={[0]}
+      data={orderShoppingList(list)}
+      renderItem={({ item }) => (
+        <ShoppingListItem
+          {...item}
+          isCompleted={!!item.completedAtTimestamp}
+          onDeleted={() => {
+            handleDelete(item.id);
+          }}
+          onToggleCompleted={() => {
+            handleToggleCompleted(item.id);
+          }}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      )}
+      keyExtractor={(item) => item.id}
+      ListEmptyComponent={
+        <ThemedView
+          style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+        >
+          <ThemedText style={{ fontSize: 24 }}>No items</ThemedText>
+        </ThemedView>
+      }
+      ListHeaderComponent={
+        <TextInput
+          value={value}
+          onChangeText={setValue}
+          keyboardType="default"
+          returnKeyType="done"
+          onSubmitEditing={handleAddItem}
+          placeholder="e.g coffee"
+          style={styles.textInput}
+        />
+      }
+    />
+    // </ParallaxScrollView>
   );
 }
 
+function orderShoppingList(shoppingList: ShoppingListItemType[]) {
+  return shoppingList.sort((item1, item2) => {
+    if (item1.completedAtTimestamp && item2.completedAtTimestamp) {
+      return item2.completedAtTimestamp - item1.completedAtTimestamp;
+    }
+
+    if (item1.completedAtTimestamp && !item2.completedAtTimestamp) {
+      return 1;
+    }
+
+    if (!item1.completedAtTimestamp && item2.completedAtTimestamp) {
+      return -1;
+    }
+
+    if (!item1.completedAtTimestamp && !item2.completedAtTimestamp) {
+      return item2.lastUpdatedTimestamp - item1.lastUpdatedTimestamp;
+    }
+
+    return 0;
+  });
+}
+
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
   reactLogo: {
     height: 178,
     width: 290,
     bottom: 0,
     left: 0,
-    position: 'absolute',
+    position: "absolute",
+  },
+  textInput: {
+    backgroundColor: Colors.light.background,
+    // borderColor: Colors.light.border,
+    borderWidth: 2,
+    borderRadius: 5,
+    padding: 12,
+    fontSize: 16,
+    margin: 10,
   },
 });
