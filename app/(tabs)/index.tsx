@@ -20,6 +20,7 @@ import { Colors } from "@/constants/Colors";
 import ShoppingListItem from "@/components/_local-components/ShoppingListItem";
 import { Link } from "expo-router";
 import { getStorage, setStorage } from "@/utils/storage";
+import * as Haptics from "expo-haptics";
 
 type ShoppingListItemType = {
   name: string;
@@ -64,26 +65,29 @@ export default function HomeScreen() {
   };
   const handleDelete = (id: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setList(list.filter((item) => item.id !== id));
     setStorage(storageKey, setList);
   };
   const handleToggleCompleted = (id: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-
-    setList(
-      list.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              lastUpdatedTimestamp: Date.now(),
-              completedAtTimestamp: item.completedAtTimestamp
-                ? undefined
-                : Date.now(),
-            }
-          : item
-      )
-    );
+    const newList = list.map((item) => {
+      if (item.id === id) {
+        const updatedItem = {
+          ...item,
+          lastUpdatedTimestamp: Date.now(),
+          completedAtTimestamp: item.completedAtTimestamp
+            ? undefined
+            : Date.now(),
+        };
+        item.completedAtTimestamp
+          ? Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+          : Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        return updatedItem;
+      }
+      return item;
+    });
+    setList(newList);
     setStorage(storageKey, list);
   };
 
