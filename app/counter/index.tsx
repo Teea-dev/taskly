@@ -17,7 +17,9 @@ export default function CounterScreen() {
     const intervalId = setInterval(() => {
       setSecondsElapsed((val) => val + 1);
     }, 1000);
-    return () => {};
+    return () => {
+      clearInterval(intervalId)
+    };
   }, []);
 
   const scheduleNotification = async () => {
