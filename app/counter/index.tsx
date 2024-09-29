@@ -8,7 +8,18 @@ import {
 } from "react-native";
 import { registerForPushNotificationsAsync } from "../../utils/registerForPushNotification";
 import * as Notifications from "expo-notifications";
+import { useEffect, useState } from "react";
+
 export default function CounterScreen() {
+  const [secondsElapsed, setSecondsElapsed] = useState(0);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setSecondsElapsed((val) => val + 1);
+    }, 1000);
+    return () => {};
+  }, []);
+
   const scheduleNotification = async () => {
     const result = await registerForPushNotificationsAsync();
     if (result === "granted") {
