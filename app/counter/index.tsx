@@ -10,13 +10,25 @@ import { registerForPushNotificationsAsync } from "../../utils/registerForPushNo
 import * as Notifications from "expo-notifications";
 import { useEffect, useState } from "react";
 import { Duration, intervalToDuration, isBefore } from "date-fns";
+import { TimeSegment } from "@/components/timeSegments";
 
-const timeStamp = Date.now() + 10 * 1000;
+const frequency = 10 * 1000;
+
+const countdownStorageKey = "countdownData";
+
+type PersistedData = {
+  currentNotificationId: string | null;
+  completedAtTimestamps: number[];
+};
 type CountDownStatus = {
   isOverDue: boolean;
   distance: Duration;
 };
 export default function CounterScreen() {
+  const [countDownState, setCountDownState] = useState<PersistedData>({
+    currentNotificationId: null,
+    completedAtTimestamps: [],
+  });
   const [status, setStatus] = useState<CountDownStatus>({
     isOverDue: false,
     distance: {},
@@ -25,16 +37,16 @@ export default function CounterScreen() {
   console.log(status);
   useEffect(() => {
     const intervalId = setInterval(() => {
-      const isOverDue = isBefore(timeStamp, Date.now());
+      const isOverDue = isBefore(frequency, Date.now());
       const distance = intervalToDuration(
         isOverDue
           ? {
-              start: timeStamp,
+              start: frequency,
               end: Date.now(),
             }
           : {
               start: Date.now(),
-              end: timeStamp,
+              end: frequency,
             }
       );
       setStatus({ isOverDue, distance });
@@ -63,13 +75,47 @@ export default function CounterScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        status.isOverDue
+          ? { backgroundColor: "red" }
+          : { backgroundColor: "white" },
+      ]}
+    >
+      {status.isOverDue ? (
+        <Text style={[styles.heading, styles.whiteText]}>Thing Overdue by</Text>
+      ) : (
+        <Text style={[styles.heading, styles.whiteText]}>Thing due in...</Text>
+      )}
+      <View style={styles.row}>
+        <TimeSegment
+          unit="Days"
+          number={status.distance.days ?? 0}
+          textStyle={status.isOverDue ? styles.whiteText : undefined}
+        />
+        <TimeSegment
+          unit="Hours"
+          number={status.distance.hours ?? 0}
+          textStyle={status.isOverDue ? styles.whiteText : undefined}
+        />
+        <TimeSegment
+          unit="Minutes"
+          number={status.distance.minutes ?? 0}
+          textStyle={status.isOverDue ? styles.whiteText : undefined}
+        />
+        <TimeSegment
+          unit="Seconds"
+          number={status.distance.seconds ?? 0}
+          textStyle={status.isOverDue ? styles.whiteText : undefined}
+        />
+      </View>
       <TouchableOpacity
         style={styles.button}
         activeOpacity={0.8}
         onPress={scheduleNotification}
       >
-        <Text style={styles.buttonText}>Schedule Notification</Text>
+        <Text style={styles.buttonText}>I've done the thing </Text>
       </TouchableOpacity>
     </View>
   );
@@ -97,5 +143,17 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textTransform: "uppercase",
     letterSpacing: 1,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  heading: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 24,
+  },
+  whiteText: {
+    color: "#fff",
   },
 });
