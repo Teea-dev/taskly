@@ -9,16 +9,38 @@ import {
 import { registerForPushNotificationsAsync } from "../../utils/registerForPushNotification";
 import * as Notifications from "expo-notifications";
 import { useEffect, useState } from "react";
+import { Duration, intervalToDuration, isBefore } from "date-fns";
 
+const timeStamp = Date.now() + 10 * 1000;
+type CountDownStatus = {
+  isOverDue: boolean;
+  distance: Duration;
+};
 export default function CounterScreen() {
-  const [secondsElapsed, setSecondsElapsed] = useState(0);
+  const [status, setStatus] = useState<CountDownStatus>({
+    isOverDue: false,
+    distance: {},
+  });
 
+  console.log(status);
   useEffect(() => {
     const intervalId = setInterval(() => {
-      setSecondsElapsed((val) => val + 1);
+      const isOverDue = isBefore(timeStamp, Date.now());
+      const distance = intervalToDuration(
+        isOverDue
+          ? {
+              start: timeStamp,
+              end: Date.now(),
+            }
+          : {
+              start: Date.now(),
+              end: timeStamp,
+            }
+      );
+      setStatus({ isOverDue, distance });
     }, 1000);
     return () => {
-      clearInterval(intervalId)
+      clearInterval(intervalId);
     };
   }, []);
 
