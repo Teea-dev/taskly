@@ -5,19 +5,20 @@ import {
   Touchable,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { registerForPushNotificationsAsync } from "../../utils/registerForPushNotification";
 import * as Notifications from "expo-notifications";
 import { useEffect, useState } from "react";
 import { Duration, intervalToDuration, isBefore } from "date-fns";
 import { TimeSegment } from "@/components/timeSegments";
-import { getStorage ,setStorage} from "@/utils/storage";
+import { getStorage, setStorage } from "@/utils/storage";
 
 const frequency = 10 * 1000;
 
-const countdownStorageKey = "countdownData";
+export  const countdownStorageKey = "countdownData";
 
-type PersistedData = {
+ export type PersistedData = {
   currentNotificationId: string | undefined;
   completedAtTimestamps: number[];
 };
@@ -26,6 +27,7 @@ type CountDownStatus = {
   distance: Duration;
 };
 export default function CounterScreen() {
+  const [isLoading, setIsLoading] = useState(true);
   const [countDownState, setCountDownState] = useState<PersistedData>({
     currentNotificationId: undefined,
     completedAtTimestamps: [],
@@ -50,6 +52,10 @@ export default function CounterScreen() {
       const timeStamp = lastCompletedTimestamp
         ? lastCompletedTimestamp + frequency
         : Date.now();
+        if(lastCompletedTimestamp){
+          setIsLoading(false);
+
+        }
       const isOverDue = isBefore(timeStamp, Date.now());
       const distance = intervalToDuration(
         isOverDue
@@ -73,7 +79,7 @@ export default function CounterScreen() {
     let pushNotificationId;
     const result = await registerForPushNotificationsAsync();
     if (result === "granted") {
-      pushNotificationId =   await Notifications.scheduleNotificationAsync({
+      pushNotificationId = await Notifications.scheduleNotificationAsync({
         content: {
           title: "The thing is due",
           body: "Here is the body of the notification",
@@ -89,14 +95,24 @@ export default function CounterScreen() {
         countDownState.currentNotificationId
       );
     }
-    const newCountDownState : PersistedData = {
+    const newCountDownState: PersistedData = {
       currentNotificationId: pushNotificationId,
-      completedAtTimestamps: countDownState ? [Date.now(), ...countDownState.completedAtTimestamps] : [Date.now()],
+      completedAtTimestamps: countDownState
+        ? [Date.now(), ...countDownState.completedAtTimestamps]
+        : [Date.now()],
     };
     // console.log(result);
     setCountDownState(newCountDownState);
     await setStorage(countdownStorageKey, newCountDownState);
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.activityIndicatorContainer}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
 
   return (
     <View
@@ -179,5 +195,11 @@ const styles = StyleSheet.create({
   },
   whiteText: {
     color: "#fff",
+  },
+  activityIndicatorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
   },
 });
