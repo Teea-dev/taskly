@@ -6,19 +6,22 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { registerForPushNotificationsAsync } from "../../utils/registerForPushNotification";
 import * as Notifications from "expo-notifications";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Duration, intervalToDuration, isBefore } from "date-fns";
 import { TimeSegment } from "@/components/timeSegments";
 import { getStorage, setStorage } from "@/utils/storage";
+import * as Haptics from "expo-haptics";
+import ConfettiCannon from "react-native-confetti-cannon";
 
-const frequency = 10 * 1000;
+const frequency = 14 * 24 * 60 * 60 * 1000;
 
-export  const countdownStorageKey = "countdownData";
+export const countdownStorageKey = "countdownData";
 
- export type PersistedData = {
+export type PersistedData = {
   currentNotificationId: string | undefined;
   completedAtTimestamps: number[];
 };
@@ -27,6 +30,8 @@ type CountDownStatus = {
   distance: Duration;
 };
 export default function CounterScreen() {
+  const { width } = useWindowDimensions();
+  const ConfettiRef = useRef<any>();
   const [isLoading, setIsLoading] = useState(true);
   const [countDownState, setCountDownState] = useState<PersistedData>({
     currentNotificationId: undefined,
@@ -37,7 +42,6 @@ export default function CounterScreen() {
     distance: {},
   });
 
-  console.log(status);
   const lastCompletedTimestamp = countDownState?.completedAtTimestamps[0];
   useEffect(() => {
     const init = async () => {
@@ -52,10 +56,9 @@ export default function CounterScreen() {
       const timeStamp = lastCompletedTimestamp
         ? lastCompletedTimestamp + frequency
         : Date.now();
-        if(lastCompletedTimestamp){
-          setIsLoading(false);
-
-        }
+      if (lastCompletedTimestamp) {
+        setIsLoading(false);
+      }
       const isOverDue = isBefore(timeStamp, Date.now());
       const distance = intervalToDuration(
         isOverDue
@@ -76,6 +79,8 @@ export default function CounterScreen() {
   }, [lastCompletedTimestamp]);
 
   const scheduleNotification = async () => {
+    ConfettiRef?.current?.start();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     let pushNotificationId;
     const result = await registerForPushNotificationsAsync();
     if (result === "granted") {
@@ -157,6 +162,13 @@ export default function CounterScreen() {
       >
         <Text style={styles.buttonText}>I've done the thing </Text>
       </TouchableOpacity>
+      <ConfettiCannon
+        ref={ConfettiRef}
+        count={50}
+        fadeOut
+        autoStart={false}
+        origin={{ x: width / 2, y: 0 }}
+      />
     </View>
   );
 }
